@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html data-protected="all">
+    <head>
+        <title>MyWebstrates Custom Components Componenets package repository</title>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+        <wpm-package id="MWFederationEditor">
+            <script id="descriptor-script" type="descriptor">
+{
+    "friendlyName": "Manage federation for your webstrate",
+    "description": "Easily add, update or remove sync servers in your webstrate with a visual UI",
+    "dependencies": [
+        "webstrate-components-repos #WebstrateComponents_Tools"
+    ],
+    "optionalDependencies": [
+        "wpm_js_libs #material-design-components",
+        "wpm_js_libs #material-design-icons",
+        "webstrate-components-repos #MaterialDesignOutlinedIcons",
+        "webstrate-components-repos #ModalDialog",
+        "webstrate-components-repos #MenuSystem",
+        "webstrate-components-repos #MaterialMenu"
+    ],
+    "assets": [],
+    "version": "1.0",
+    "license": "MIT",
+    "changelog": {
+        "1.0": "Initial version"
+    }
+}
+
+</script>
+
+            <template id="federationEditorBase">
+    <div class="federation-editor-base">
+        <p>Federation servers added here will propagate changes made in the webstrate to their peers</p>
+        <ul class="mdc-list mdc-list--two-line serverlist" data-mdc-auto-init="MDCList">
+            <li class="mdc-list-item add-server" data-mdc-auto-init="MDCRipple" tabindex="0">
+                <span class="mdc-list-item__ripple"></span>
+                <i class="mdc-list-item__graphic material-icons" aria-hidden="true">add</i>
+                <span>
+                    Add Server
+                </span>
+            </li>            
+        </ul>
+        
+    </div>    
+</template>
+
+<template id="federationEditorItem">
+    <li class="mdc-list-item" data-mdc-auto-init="MDCRipple" tabindex="0">
+        <span class="mdc-list-item__ripple"></span>
+        <i class="material-icons server-icon mdc-list-item__graphic" aria-hidden="true" >add</i>
+        <span class="mdc-list-item__text">
+            <span class="mdc-list-item__primary-text server-name">Server
+            </span>
+            <span class="mdc-list-item__secondary-text server-status">Status</span>
+        </span>
+        <button data-mdc-ripple-is-unbounded="" class="mdc-list-item__meta mdc-icon-button material-icons server-delete">
+            delete
+        </button>
+    </li>
+</template>
+
+<template id="federationEditorServerAdder">
+    <div>
+        <label class="mdc-text-field mdc-text-field--filled" data-mdc-auto-init="MDCTextField">
+          <span class="mdc-text-field__ripple"></span>
+          <span class="mdc-floating-label" id="server-label-id">Server Address</span>
+          <input class="mdc-text-field__input" type="text"
+                 aria-labelledby="server-label-id"
+                 aria-controls="server-helper-text"
+                 aria-describedby="server-helper-text" id="serveraddress">
+          <span class="mdc-line-ripple"></span>
+        </label>
+        <div class="mdc-text-field-helper-line">
+          <div id="server-helper-text" class="mdc-text-field-helper-text" aria-hidden="true">
+            Address without protocol - e.g. 'sync.mydomain.com'
+          </div>
+        </div>            
+    </div>
+</template>
+
+            <script id="webstrate-federation-editor-script" type="disabled">
+/**
+ *  Federation Editor
+ *  Visual editor for managing sync server federation for a Webstrate
+ * 
+ *  Copyright 2024 Janus B. Kristensen, CAVI,
+ *  Center for Advanced Visualization and Interacion, Aarhus University
+ *    
+ * MIT License:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of 
+ * this software and associated documentation files (the “Software”), to deal in 
+ * the Software without restriction, including without limitation the rights to use, 
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the 
+ * Software, and to permit persons to whom the Software is furnished to do so, 
+ * subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all 
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+ * SOFTWARE.
+ */
+
+/**
+ * Visual browser for managing sync server federation for a Webstrate
+ */
+window.FederationEditor = class FederationEditor {
+    constructor(autoOpen=true) {
+        let self = this;        
+        try {
+            this.assertSupported();
+        } catch (ex){
+            alert("One of the required dependencies is missing: "+ex);
+            throw ex;
+        }
+        
+        this.html = WebstrateComponents.Tools.loadTemplate("#federationEditorBase");
+        this.itemTemplate = WebstrateComponents.Tools.loadTemplate("#federationEditorItem");
+        this.servers = this.html.querySelector(".serverlist");
+        
+        wpm.require(["material-design-components","material-design-icons","ModalDialog","MenuSystem","MaterialMenu","MaterialDesignOutlinedIcons"]).then(()=>{
+            mdc.autoInit(self.html);
+            
+            // Start showing the view
+            this.updateServerView();
+            if (autoOpen) this.openInBody();     
+            this.setupAdderDialog();            
+        });
+    }
+    
+    openInBody(){
+        let parent = document.createElement("transient");
+        document.body.appendChild(parent);            
+        this.setTopLevelComponent(parent);
+        parent.appendChild(this.html);
+    }
+    
+    assertSupported(){
+        if (typeof automerge === "undefined") throw new Error("Missing automerge");
+        if (!automerge.rootDoc?.meta?.federations) throw new Error("Missing federations array");
+        if (!webstrate.addSyncServer) throw new Error("Missing addSyncServer");
+        //if (!webstrate.removeSyncServer) throw new Error("Missing removeSyncServer");
+    }
+    
+    setupAdderDialog(){
+        let self = this;
+        let serverAdderTemplate = WebstrateComponents.Tools.loadTemplate("#federationEditorServerAdder");
+        let addServerDialog = new WebstrateComponents.ModalDialog(
+                serverAdderTemplate,
+                {
+                    "title":"Add Federation Server",
+                    "actions": {
+                            "cancel":{},
+                            "add": {primary: true, mdcIcon: "add_link"}
+                    }
+                }
+        );
+        this.topLevelComponent.appendChild(addServerDialog.html);
+        EventSystem.registerEventCallback('ModalDialog.Closing', function(evt) {
+            if(evt.detail.dialog===addServerDialog && evt.detail.action === "add") {                
+                let server = serverAdderTemplate.querySelector("#serveraddress");
+                if (server && server.value.trim().length>0){
+                    webstrate.addSyncServer(server.value);
+                    self.updateServerView();
+                }                
+            }
+        });          
+        
+        this.html.querySelector(".add-server").addEventListener("click",()=>{
+            addServerDialog.html.querySelector("#serveraddress").value = "";
+            addServerDialog.open();
+        });
+        
+    }
+    
+    async updateServerView(){
+        let self = this;
+        let newServers = automerge.rootDoc.meta.federations;
+        
+        // Remove old ones
+        Array.from(this.servers.children).forEach(serverEl=>{
+            if (serverEl.federationURL && !newServers.includes(serverEl.federationURL)){
+                serverEl.remove();
+            }
+        });
+        let existingServers = Array.from(this.servers.children).filter(entry=>entry.federationURL).map(entry=>entry.federationURL);
+        
+        // Add new ones
+        newServers.forEach(server=>{
+            if (!existingServers.includes(server)){
+                let serverEl = WebstrateComponents.Tools.loadTemplate("#federationEditorItem");                
+                serverEl.federationURL = server;
+                serverEl.querySelector(".server-name").innerText = server;
+                serverEl.querySelector(".server-status").innerText = "checking...";
+                serverEl.querySelector(".server-icon").innerText = "network_check";
+                serverEl.querySelector(".server-icon").style.color="grey";
+                self.servers.insertBefore(serverEl,self.servers.firstChild);
+                self.checkServer(server).then(()=>{
+                    serverEl.querySelector(".server-status").innerText = "Connection Established";
+                    serverEl.querySelector(".server-icon").innerText = "cloud_done";
+                    serverEl.querySelector(".server-icon").style.color="green";
+                },(ex)=>{
+                    serverEl.querySelector(".server-status").innerText = ""+ex;
+                    serverEl.querySelector(".server-icon").innerText = "cloud_off";                    
+                    serverEl.querySelector(".server-icon").style.color="red";
+                });
+                serverEl.querySelector(".server-delete").addEventListener("click",()=>{
+                    webstrate.removeSyncServer(server);
+                    self.updateServerView();
+                });
+            }
+        });
+    }
+    
+    setTopLevelComponent(component){
+        this.topLevelComponent = component;
+    }        
+    
+    /**
+     * Checks if a server accepts connections
+     * @param {type} url
+     * @returns true if server is working
+     */
+    checkServer(address){
+        return new Promise((resolve, reject)=>{
+            try {
+                let ws = new WebSocket("wss://"+address);
+                ws.onopen = function(e) {
+                  resolve();
+                  ws.close();
+                };
+                ws.onerror = function(error) {
+                  reject("Websocket Error");
+                };                    
+            } catch (ex){
+                reject(ex);
+            }
+        });
+    }
+};
+
+</script>
+            
+        </wpm-package>
+        <wpm-package id="MWCauldronIntegration">
+            <script id="descriptor-script" type="descriptor">
+{
+    "friendlyName": "Cauldron Integration For MyWebstrates",
+    "description": "Actions and menu entries",
+    "dependencies": [
+        "webstrate-components-repos #MenuSystem",
+        "webstrate-components-repos #wsc-icon-registry"
+    ],
+    "optionalDependencies": [
+        "#MWFederationEditor"
+    ],
+    "assets": [],
+    "version": "0.1",
+    "license": "MIT",    
+    "changelog": {
+        "0.1": "Initial version"
+    }
+}
+
+</script>
+
+            <script id="cauldron-integration-script" type="disabled">
+/**
+ *  Cauldron Integration
+ * 
+ *  Copyright 2024 Janus B. Kristensen, CAVI,
+ *  Center for Advanced Visualization and Interacion, Aarhus University
+ *    
+ * MIT License:
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of 
+ * this software and associated documentation files (the “Software”), to deal in 
+ * the Software without restriction, including without limitation the rights to use, 
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the 
+ * Software, and to permit persons to whom the Software is furnished to do so, 
+ * subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all 
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+ * SOFTWARE.
+ */
+
+// Run when/if Cauldron is initialized
+{
+    let alreadyInitializedDelayLoader = false;
+    EventSystem.registerEventCallback("Cauldron.OnOpen", async ()=>{
+        if (!alreadyInitializedDelayLoader){
+            console.log("Enabling additional MyWebstrates packages for Cauldron integration");
+            alreadyInitializedDelayLoader = true;
+
+            if (webstrate?.addSyncServer){
+                MenuSystem.MenuManager.registerMenuItem("Cauldron.File.Sync", {
+                    label: "Federation Servers...",
+                    tooltip: "Automerge Sync Servers for sharing webstrates",
+                    icon: IconRegistry.createIcon("mdc:cloud"),                
+                    onAction: async (menuItem)=>{
+                        let parent = menuItem.menu.context.cauldron.getPopupParent();        
+                        await wpm.require("MWFederationEditor");
+                        let editor = new FederationEditor(false);
+                        editor.setTopLevelComponent(parent);
+                        let dialog = new WebstrateComponents.ModalDialog(editor.html, {
+                            title: "Federation Servers",
+                            actions: {
+                                "Close":{primary:true}
+                            }
+                        });
+                        parent.appendChild(dialog.html);
+                        dialog.open();       
+                    }
+                });        
+            }                
+        }
+    });    
+}
+
+</script>
+            
+        </wpm-package>    
+    </body>
+</html> 
+
