@@ -1,0 +1,21 @@
+{
+    "friendlyName": "Manage federation for your webstrate",
+    "description": "Easily add, update or remove sync servers in your webstrate with a visual UI",
+    "dependencies": [
+        "webstrate-components-repos #WebstrateComponents_Tools"
+    ],
+    "optionalDependencies": [
+        "wpm_js_libs #material-design-components",
+        "wpm_js_libs #material-design-icons",
+        "webstrate-components-repos #MaterialDesignOutlinedIcons",
+        "webstrate-components-repos #ModalDialog",
+        "webstrate-components-repos #MenuSystem",
+        "webstrate-components-repos #MaterialMenu"
+    ],
+    "assets": [],
+    "version": "1.0",
+    "license": "MIT",
+    "changelog": {
+        "1.0": "Initial version"
+    }
+}

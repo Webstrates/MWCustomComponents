@@ -1,0 +1,49 @@
+<template id="federationEditorBase">
+    <div class="federation-editor-base">
+        <p>Federation servers added here will propagate changes made in the webstrate to their peers</p>
+        <ul class="mdc-list mdc-list--two-line serverlist" data-mdc-auto-init="MDCList">
+            <li class="mdc-list-item add-server" data-mdc-auto-init="MDCRipple" tabindex="0">
+                <span class="mdc-list-item__ripple"></span>
+                <i class="mdc-list-item__graphic material-icons" aria-hidden="true">add</i>
+                <span>
+                    Add Server
+                </span>
+            </li>            
+        </ul>
+        
+    </div>    
+</template>
+
+<template id="federationEditorItem">
+    <li class="mdc-list-item" data-mdc-auto-init="MDCRipple" tabindex="0">
+        <span class="mdc-list-item__ripple"></span>
+        <i class="material-icons server-icon mdc-list-item__graphic" aria-hidden="true" >add</i>
+        <span class="mdc-list-item__text">
+            <span class="mdc-list-item__primary-text server-name">Server
+            </span>
+            <span class="mdc-list-item__secondary-text server-status">Status</span>
+        </span>
+        <button data-mdc-ripple-is-unbounded="" class="mdc-list-item__meta mdc-icon-button material-icons server-delete">
+            delete
+        </button>
+    </li>
+</template>
+
+<template id="federationEditorServerAdder">
+    <div>
+        <label class="mdc-text-field mdc-text-field--filled" data-mdc-auto-init="MDCTextField">
+          <span class="mdc-text-field__ripple"></span>
+          <span class="mdc-floating-label" id="server-label-id">Server Address</span>
+          <input class="mdc-text-field__input" type="text"
+                 aria-labelledby="server-label-id"
+                 aria-controls="server-helper-text"
+                 aria-describedby="server-helper-text" id="serveraddress">
+          <span class="mdc-line-ripple"></span>
+        </label>
+        <div class="mdc-text-field-helper-line">
+          <div id="server-helper-text" class="mdc-text-field-helper-text" aria-hidden="true">
+            Address without protocol - e.g. 'sync.mydomain.com'
+          </div>
+        </div>            
+    </div>
+</template>

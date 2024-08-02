@@ -1,0 +1,17 @@
+{
+    "friendlyName": "Cauldron Integration For MyWebstrates",
+    "description": "Actions and menu entries",
+    "dependencies": [
+        "webstrate-components-repos #MenuSystem",
+        "webstrate-components-repos #wsc-icon-registry"
+    ],
+    "optionalDependencies": [
+        "#MWFederationEditor"
+    ],
+    "assets": [],
+    "version": "0.1",
+    "license": "MIT",    
+    "changelog": {
+        "0.1": "Initial version"
+    }
+}
