@@ -52,6 +52,38 @@
                         dialog.open();       
                     }
                 });        
+                
+                let shareSyncLinkMenu = MenuSystem.MenuManager.createMenu("MyWebstrate.ShareSyncLinks", {});
+                let shareMap = {};
+                MenuSystem.MenuManager.registerMenuItem("Cauldron.File.Sync", {
+                    label: "Copy Shareable Link...",
+                    icon: IconRegistry.createIcon("mdc:offline_share"),
+                    onOpen: ()=>{
+                        if (automerge?.rootDoc?.meta?.federations?.length>0){
+                            automerge.rootDoc.meta.federations.forEach(server=>{
+                                console.log("Adding",server);
+                                if (!shareMap[server]){
+                                    let item = shareSyncLinkMenu.addItem({
+                                        label: server,
+                                        tooltip: "Copy a shareable link to the clipboard",
+                                        icon: IconRegistry.createIcon("mdc:copy"),                
+                                        onAction: async (menuItem)=>{
+                                            let link = window.location.origin+window.location.pathname;
+                                            if (link.endsWith("/")) link = link.substring(0,link.length-1);
+                                            link += "@"+server;
+                                            navigator.clipboard.writeText(link);
+                                        }
+                                    });
+                                    shareMap[server] = item;
+                                }
+                            });
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    },
+                    submenu: shareSyncLinkMenu
+                });                        
             }                
         }
     });    
