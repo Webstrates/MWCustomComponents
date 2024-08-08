@@ -132,7 +132,15 @@ window.FederationEditor = class FederationEditor {
             // Start showing the view
             this.updateServerView();
             if (autoOpen) this.openInBody();     
-            this.setupAdderDialog();            
+            this.setupAdderDialog();
+            
+            try {
+                webstrate.on("syncServerAdded", ()=>{self.updateServerView()});
+                webstrate.on("syncServerRemoved", ()=>{self.updateServerView()});
+                //TODO: Clean these up again
+            } catch (ex){
+                console.log("Attempting to monitor sync server events but failed", x);
+            }
         });
     }
     
@@ -144,10 +152,8 @@ window.FederationEditor = class FederationEditor {
     }
     
     assertSupported(){
-        if (typeof automerge === "undefined") throw new Error("Missing automerge");
-        if (!automerge.rootDoc?.meta?.federations) throw new Error("Missing federations array");
+        if (!webstrate.getSyncServers) throw new Error("Missing federations getSyncServers");
         if (!webstrate.addSyncServer) throw new Error("Missing addSyncServer");
-        //if (!webstrate.removeSyncServer) throw new Error("Missing removeSyncServer");
     }
     
     setupAdderDialog(){
@@ -169,7 +175,6 @@ window.FederationEditor = class FederationEditor {
                 let server = serverAdderTemplate.querySelector("#serveraddress");
                 if (server && server.value.trim().length>0){
                     webstrate.addSyncServer(server.value);
-                    self.updateServerView();
                 }                
             }
         });          
@@ -183,7 +188,7 @@ window.FederationEditor = class FederationEditor {
     
     async updateServerView(){
         let self = this;
-        let newServers = automerge.rootDoc.meta.federations;
+        let newServers = webstrate.getSyncServers();
         
         // Remove old ones
         Array.from(this.servers.children).forEach(serverEl=>{
@@ -212,10 +217,13 @@ window.FederationEditor = class FederationEditor {
                     serverEl.querySelector(".server-icon").innerText = "cloud_off";                    
                     serverEl.querySelector(".server-icon").style.color="red";
                 });
-                serverEl.querySelector(".server-delete").addEventListener("click",()=>{
-                    webstrate.removeSyncServer(server);
-                    self.updateServerView();
-                });
+                if (webstrate.removeSyncServer){
+                    serverEl.querySelector(".server-delete").addEventListener("click",()=>{
+                        webstrate.removeSyncServer(server);
+                    });
+                } else {
+                    serverEl.querySelector(".server-delete").remove();
+                }
             }
         });
     }
